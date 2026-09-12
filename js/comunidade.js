@@ -15,12 +15,25 @@ const gallery = document.querySelector('[data-community-gallery]');
 const tabs = [...document.querySelectorAll('[data-community-tab]')];
 const panels = [...document.querySelectorAll('[data-community-panel]')];
 const galleryForm = document.querySelector('[data-community-gallery-form]');
+const honuFeedback = document.querySelector('[data-honu-feedback]');
+const honuRoster = document.querySelector('[data-honu-roster]');
+const honuOnlineCount = document.querySelector('[data-honu-online-count]');
+const honuUpdated = document.querySelector('[data-honu-updated]');
+const honuRefresh = document.querySelector('[data-honu-refresh]');
 let members = [];
 let ranks = new Map();
 let medalDefinitions = new Map();
 let galleryItems = [];
 let currentUser = null;
 let viewerProfile = null;
+let honuRefreshTimer = null;
+let honuRequest = null;
+let activeCommunityTab = 'gallery';
+
+const HONU_OUTFIT_ID = '37576258294147955';
+const HONU_API_ORIGIN = 'https://wt.honu.pw';
+const HONU_ONLINE_ENDPOINT = `${HONU_API_ORIGIN}/api/outfit/${HONU_OUTFIT_ID}/online`;
+const HONU_REFRESH_INTERVAL = 60_000;
 
 const classNames = { infiltrador: 'Infiltrador', 'assalto-leve': 'Assalto leve', medico: 'Médico de combate', engenheiro: 'Engenheiro', 'assalto-pesado': 'Assalto pesado', max: 'MAX' };
 const classSymbols = { infiltrador: '◇', 'assalto-leve': '△', medico: '✚', engenheiro: '⚙', 'assalto-pesado': '⬡', max: '◆' };
@@ -44,6 +57,125 @@ const setFeedback = (message, state = 'info') => {
   if (!feedback) return;
   feedback.textContent = message;
   feedback.dataset.state = state;
+};
+
+const setHonuFeedback = (message, state = 'info') => {
+  if (!honuFeedback) return;
+  honuFeedback.textContent = message;
+  honuFeedback.dataset.state = state;
+};
+
+const honuWorldName = worldId => ({
+  1: 'Osprey',
+  10: 'Wainwright',
+  13: 'Cobalt',
+  17: 'Emerald',
+  19: 'Jaeger',
+  25: 'Briggs',
+  40: 'SolTech'
+}[Number(worldId)] || 'Osprey');
+
+const normalizeHonuPlayer = player => ({
+  id: String(player?.id || ''),
+  name: String(player?.name || 'Soldado EXBR'),
+  battleRank: Number.isFinite(Number(player?.battleRank)) ? Number(player.battleRank) : null,
+  prestige: Number.isFinite(Number(player?.prestige)) ? Number(player.prestige) : 0,
+  worldId: Number(player?.worldID || 1)
+});
+
+const renderHonuRoster = players => {
+  if (!honuRoster) return;
+  honuRoster.replaceChildren();
+
+  if (!players.length) {
+    const empty = document.createElement('div');
+    empty.className = 'community-empty online-empty';
+    empty.textContent = 'Nenhum soldado EXBR aparece online neste momento.';
+    honuRoster.append(empty);
+    return;
+  }
+
+  players.forEach(player => {
+    const card = document.createElement('article');
+    card.className = 'online-player';
+
+    const signal = document.createElement('span');
+    signal.className = 'online-player-signal';
+    signal.setAttribute('aria-label', 'Online agora');
+
+    const identity = document.createElement('div');
+    identity.className = 'online-player-identity';
+    const name = document.createElement('strong');
+    name.textContent = player.name;
+    const details = document.createElement('span');
+    const rank = player.battleRank === null ? 'BR não informado' : `BR ${player.battleRank}`;
+    const prestige = player.prestige > 0 ? ` · ASP ${player.prestige}` : '';
+    details.textContent = `${rank}${prestige} · ${honuWorldName(player.worldId)}`;
+    identity.append(name, details);
+
+    const profile = document.createElement('a');
+    profile.href = `${HONU_API_ORIGIN}/c/${encodeURIComponent(player.id)}`;
+    profile.target = '_blank';
+    profile.rel = 'noopener noreferrer';
+    profile.textContent = 'Dados de combate ↗';
+
+    card.append(signal, identity, profile);
+    honuRoster.append(card);
+  });
+};
+
+const loadHonuActivity = async () => {
+  if (!honuRoster || honuRequest) return;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 12_000);
+  honuRequest = controller;
+  if (honuRefresh) honuRefresh.disabled = true;
+  setHonuFeedback('Consultando a telemetria pública do Honu…');
+
+  try {
+    const response = await fetch(HONU_ONLINE_ENDPOINT, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+      mode: 'cors',
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`Honu respondeu com status ${response.status}`);
+    const payload = await response.json();
+    if (!Array.isArray(payload)) throw new Error('Formato inesperado recebido do Honu');
+
+    const players = payload
+      .map(normalizeHonuPlayer)
+      .filter(player => player.id && player.name)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    renderHonuRoster(players);
+    if (honuOnlineCount) honuOnlineCount.textContent = String(players.length).padStart(2, '0');
+    if (honuUpdated) honuUpdated.textContent = new Intl.DateTimeFormat('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date());
+    setHonuFeedback(`${players.length} soldado${players.length === 1 ? '' : 's'} EXBR online agora. Atualização automática a cada 60 segundos.`, 'success');
+  } catch (error) {
+    if (honuOnlineCount) honuOnlineCount.textContent = '--';
+    if (honuRoster && !honuRoster.querySelector('.online-player')) {
+      honuRoster.innerHTML = '<div class="community-empty online-empty">A leitura em tempo real está temporariamente indisponível. Use o painel Honu para consultar agora.</div>';
+    }
+    setHonuFeedback(error?.name === 'AbortError'
+      ? 'O Honu demorou para responder. Uma nova tentativa será feita automaticamente.'
+      : 'Não foi possível alcançar o Honu. Uma nova tentativa será feita automaticamente.', 'error');
+  } finally {
+    window.clearTimeout(timeout);
+    honuRequest = null;
+    if (honuRefresh) honuRefresh.disabled = false;
+  }
+};
+
+const stopHonuUpdates = () => {
+  if (honuRefreshTimer) window.clearInterval(honuRefreshTimer);
+  honuRefreshTimer = null;
+};
+
+const startHonuUpdates = () => {
+  stopHonuUpdates();
+  if (activeCommunityTab !== 'online' || document.hidden) return;
+  loadHonuActivity();
+  honuRefreshTimer = window.setInterval(loadHonuActivity, HONU_REFRESH_INTERVAL);
 };
 
 const publicMedal = medal => ({
@@ -331,10 +463,18 @@ const loadCommunity = async user => {
 search?.addEventListener('input', render);
 tabs.forEach(tab => tab.addEventListener('click', () => {
   const target = tab.dataset.communityTab;
+  activeCommunityTab = target;
   tabs.forEach(item => item.setAttribute('aria-selected', String(item === tab)));
   panels.forEach(panel => { panel.hidden = panel.dataset.communityPanel !== target; });
   if (target === 'gallery') gallery?.querySelector('button, a, video')?.focus({ preventScroll: true });
+  if (target === 'online') startHonuUpdates();
+  else stopHonuUpdates();
 }));
+honuRefresh?.addEventListener('click', loadHonuActivity);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopHonuUpdates();
+  else if (activeCommunityTab === 'online') startHonuUpdates();
+});
 onAuthStateChanged(auth, async user => {
   if (!user) {
     window.location.replace('login.html');
