@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="../css/reset.css?v=20260906-2">
   <link rel="stylesheet" href="../css/base.css?v=20260906-10">
   <link rel="stylesheet" href="../css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="../css/pages/comunidade.css?v=20260912-5">
+  <link rel="stylesheet" href="../css/pages/comunidade.css?v=20260912-6">
 </head>
 <body class="community-page has-tactical-dock">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -56,7 +56,38 @@
       <div class="community-tabs" role="tablist" aria-label="Setores da comunidade">
         <button type="button" role="tab" aria-selected="true" aria-controls="community-gallery-panel" data-community-tab="gallery">Galeria</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="community-members-panel" data-community-tab="members">Membros</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="community-online-panel" data-community-tab="online">No jogo</button>
       </div>
+
+      <section id="community-online-panel" class="community-online-panel" role="tabpanel" data-community-panel="online" hidden>
+        <header class="online-heading">
+          <div>
+            <span>HONU // OSPREY // TEMPO REAL</span>
+            <h2>EXBR ativa no jogo</h2>
+            <p>Soldados da Outfit conectados ao PlanetSide 2 neste momento.</p>
+          </div>
+          <div class="online-actions">
+            <button type="button" data-honu-refresh>Atualizar agora</button>
+            <a href="https://wt.honu.pw/o/37576258294147955?tag=EXBR" target="_blank" rel="noopener noreferrer">Abrir painel Honu ↗</a>
+          </div>
+        </header>
+
+        <div class="online-summary" aria-label="Resumo de atividade da EXBR">
+          <article><span>Online agora</span><strong data-honu-online-count>--</strong></article>
+          <article><span>Servidor</span><strong>Osprey</strong></article>
+          <article><span>Última leitura</span><strong data-honu-updated>--:--</strong></article>
+        </div>
+
+        <p class="community-feedback online-feedback" data-honu-feedback aria-live="polite">Abra esta aba para consultar a atividade da Outfit.</p>
+        <div class="online-roster" data-honu-roster aria-label="Membros EXBR online">
+          <div class="community-empty">Aguardando consulta ao Honu…</div>
+        </div>
+
+        <aside class="online-intelligence">
+          <strong>Próxima fase // inteligência de operações</strong>
+          <p>Presença, eliminações e capturas poderão ser vinculadas às operações depois que cada perfil EXBR estiver associado ao personagem do jogo.</p>
+        </aside>
+      </section>
 
       <section id="community-members-panel" role="tabpanel" data-community-panel="members" hidden>
         <label class="community-search" for="community-search">
@@ -109,6 +140,6 @@
 
   <script src="../js/main.js?v=20260907-2" defer></script>
   <script src="../js/session-ui.js?v=20260907-2" type="module"></script>
-  <script src="../js/comunidade.js?v=20260912-7" type="module"></script>
+  <script src="../js/comunidade.js?v=20260912-8" type="module"></script>
 </body>
 </html>
