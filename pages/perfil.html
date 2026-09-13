@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="../css/reset.css?v=20260906-2">
   <link rel="stylesheet" href="../css/base.css?v=20260906-10">
   <link rel="stylesheet" href="../css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260913-1">
+  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260913-2">
 </head>
 <body class="member-page has-tactical-dock">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -70,6 +70,9 @@
       </div>
 
       <section class="identity-zone" aria-labelledby="member-name" data-reveal>
+        <button class="honu-admin-open" type="button" data-honu-admin-open hidden>
+          <span aria-hidden="true">⌁</span> Contas Honu
+        </button>
         <header class="member-section-label">
           <p class="eyebrow"><span></span> Identificação</p>
           <span class="member-online"><i aria-hidden="true"></i> <span data-member-status>Conectando…</span></span>
@@ -106,24 +109,6 @@
             <strong data-profile-edit-label>Editar perfil</strong>
           </button>
         </article>
-
-        <form class="honu-profile-admin tactical-panel" data-honu-profile-admin hidden>
-          <header>
-            <div><span>ADMINISTRAÇÃO // HONU</span><strong>Vínculo do personagem</strong></div>
-            <i aria-hidden="true"></i>
-          </header>
-          <p>Associe este perfil ao ID do personagem no PlanetSide 2. Também é possível colar o link completo do Honu.</p>
-          <label for="honu-character-id">ID do personagem</label>
-          <div class="honu-profile-controls">
-            <input id="honu-character-id" type="text" inputmode="numeric" maxlength="120" placeholder="Ex.: 5428… ou https://wt.honu.pw/c/…" autocomplete="off" data-honu-character-id>
-            <button type="submit" data-honu-link-save>Validar e vincular</button>
-            <button class="honu-unlink-button" type="button" data-honu-link-remove hidden>Remover</button>
-          </div>
-          <div class="honu-profile-result">
-            <span data-honu-link-feedback>Nenhum personagem vinculado.</span>
-            <a href="#" target="_blank" rel="noopener noreferrer" data-honu-character-link hidden>Ver personagem no Honu ↗</a>
-          </div>
-        </form>
 
         <div class="profile-customizer" id="profile-customizer" aria-label="Personalização do perfil" hidden>
           <div class="customizer-group">
@@ -248,6 +233,23 @@
     </div>
   </dialog>
 
+  <dialog class="honu-accounts-dialog tactical-panel" data-honu-profile-admin aria-labelledby="honu-accounts-title">
+    <header class="honu-accounts-header">
+      <div><span>ADMINISTRAÇÃO // HONU</span><h2 id="honu-accounts-title">Contas do jogador</h2></div>
+      <button type="button" data-honu-admin-close aria-label="Fechar contas Honu">×</button>
+    </header>
+    <p class="honu-accounts-intro">Associe um ou mais personagens do PlanetSide 2 a este perfil. Informe o ID ou cole o link completo do Honu.</p>
+    <form class="honu-link-form" data-honu-link-form>
+      <label for="honu-character-id">ID ou link do personagem</label>
+      <div class="honu-profile-controls">
+        <input id="honu-character-id" type="text" inputmode="numeric" maxlength="120" placeholder="5428… ou https://wt.honu.pw/c/…" autocomplete="off" data-honu-character-id>
+        <button type="submit" data-honu-link-save>Validar e adicionar</button>
+      </div>
+    </form>
+    <p class="honu-link-feedback" data-honu-link-feedback aria-live="polite">Nenhuma conta vinculada.</p>
+    <div class="honu-account-list" data-honu-account-list></div>
+  </dialog>
+
   <dialog class="profile-medal-catalog tactical-panel" data-profile-medal-catalog aria-labelledby="profile-medal-catalog-title">
     <div class="profile-medal-catalog-header">
       <div><span>ADMINISTRAÇÃO // CONDECORAÇÕES</span><h2 id="profile-medal-catalog-title">Adicionar medalha</h2></div>
@@ -279,6 +281,6 @@
   </nav>
 
   <script src="../js/main.js?v=20260907-2" defer></script>
-  <script src="../js/perfil.js?v=20260913-1" type="module"></script>
+  <script src="../js/perfil.js?v=20260913-2" type="module"></script>
 </body>
 </html>
