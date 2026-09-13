@@ -147,37 +147,69 @@
   --banner-filter: saturate(0.48) hue-rotate(52deg) brightness(0.44) contrast(1.2);
 }
 
-.honu-profile-admin {
-  display: grid;
-  gap: 0.65rem;
-  margin-top: 0.75rem;
-  padding: 0.8rem;
-  border-color: rgba(229, 187, 55, 0.46);
-  background: linear-gradient(135deg, rgba(45, 36, 8, 0.48), rgba(3, 22, 28, 0.96));
-  box-shadow: inset 0 0 1.5rem rgba(229, 187, 55, 0.05);
+.honu-admin-open {
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.45rem auto;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid rgba(225, 187, 64, 0.6);
+  color: #f0d16d;
+  background: rgba(45, 35, 8, 0.46);
+  font-size: 0.59rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
+.honu-admin-open[hidden] { display: none; }
+.honu-admin-open:hover, .honu-admin-open:focus-visible { border-color: #f0cc55; color: #fff4c1; background: rgba(86, 64, 8, 0.58); }
 
-.honu-profile-admin[hidden] { display: none; }
-.honu-profile-admin header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
-.honu-profile-admin header div { display: grid; gap: 0.2rem; }
-.honu-profile-admin header span { color: #c2a33f; font: 0.55rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.11em; }
-.honu-profile-admin header strong { color: #f6df83; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; }
-.honu-profile-admin header i { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #f1c33d; box-shadow: 0 0 0.7rem rgba(241, 195, 61, 0.62); }
-.honu-profile-admin > p { color: #879ea4; font-size: 0.7rem; line-height: 1.45; }
-.honu-profile-admin > label { color: #79cbd4; font: 0.58rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.honu-accounts-dialog {
+  width: min(calc(100% - 2rem), 42rem);
+  max-height: min(82vh, 42rem);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(229, 187, 55, 0.58);
+  color: #eaf9fb;
+  background: linear-gradient(145deg, rgba(6, 39, 46, 0.99), rgba(2, 15, 20, 0.995));
+  box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.72), inset 0 0 2rem rgba(229, 187, 55, 0.04);
+}
+.honu-accounts-dialog:not([open]) { display: none; }
+.honu-accounts-dialog::backdrop { background: rgba(0, 7, 10, 0.84); backdrop-filter: blur(4px); }
+.honu-accounts-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.85rem 1rem; border-bottom: 1px solid rgba(229, 187, 55, 0.34); background: linear-gradient(90deg, rgba(75, 57, 9, 0.58), rgba(4, 31, 37, 0.9)); }
+.honu-accounts-header div { display: grid; gap: 0.22rem; }
+.honu-accounts-header span { color: #c7a642; font: 0.55rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.12em; }
+.honu-accounts-header h2 { color: #f8e7a5; font-size: 1.15rem; text-transform: uppercase; }
+.honu-accounts-header button { width: 2.2rem; height: 2.2rem; border: 0; color: #9fc9cf; background: transparent; font-size: 1.45rem; cursor: pointer; }
+.honu-accounts-header button:hover, .honu-accounts-header button:focus-visible { color: #fff; background: rgba(66, 162, 174, 0.16); }
+.honu-accounts-intro { padding: 0.8rem 1rem 0; color: #879fa5; font-size: 0.76rem; line-height: 1.5; }
+.honu-link-form { display: grid; gap: 0.45rem; padding: 0.8rem 1rem 0.5rem; }
+.honu-link-form > label { color: #79cbd4; font: 0.58rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 .honu-profile-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.45rem; }
-.honu-profile-controls input { min-width: 0; min-height: 2.55rem; padding: 0.55rem 0.65rem; border: 1px solid rgba(76, 181, 194, 0.34); outline: 0; color: #e8f9fb; background: rgba(1, 15, 20, 0.92); font: 0.72rem/1.2 Consolas, "Courier New", monospace; }
+.honu-profile-controls input { min-width: 0; min-height: 2.75rem; padding: 0.55rem 0.7rem; border: 1px solid rgba(76, 181, 194, 0.34); outline: 0; color: #e8f9fb; background: rgba(1, 15, 20, 0.92); font: 0.72rem/1.2 Consolas, "Courier New", monospace; }
 .honu-profile-controls input:focus { border-color: #70d2dd; box-shadow: 0 0 0.7rem rgba(76, 190, 202, 0.14); }
-.honu-profile-controls button { min-height: 2.55rem; padding: 0.5rem 0.7rem; border: 1px solid #dfbd4d; color: #f9e69c; background: rgba(63, 48, 8, 0.54); font-size: 0.59rem; font-weight: 850; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+.honu-profile-controls button { min-height: 2.75rem; padding: 0.5rem 0.8rem; border: 1px solid #dfbd4d; color: #f9e69c; background: rgba(63, 48, 8, 0.54); font-size: 0.62rem; font-weight: 850; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
 .honu-profile-controls button:hover, .honu-profile-controls button:focus-visible { color: #fff; background: rgba(113, 83, 8, 0.62); }
 .honu-profile-controls button:disabled { opacity: 0.5; cursor: wait; }
-.honu-profile-controls .honu-unlink-button { grid-column: 1 / -1; min-height: 2rem; border-color: rgba(255, 102, 91, 0.46); color: #ff8d83; background: rgba(74, 16, 13, 0.3); }
-.honu-profile-result { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; min-width: 0; padding-top: 0.55rem; border-top: 1px solid rgba(70, 166, 178, 0.2); }
-.honu-profile-result span { overflow-wrap: anywhere; color: #789198; font: 0.59rem/1.4 Consolas, "Courier New", monospace; }
-.honu-profile-result span[data-state="success"] { color: #86ed70; }
-.honu-profile-result span[data-state="error"] { color: #ff8076; }
-.honu-profile-result a { flex: 0 0 auto; color: #62d4de; font-size: 0.59rem; font-weight: 800; text-transform: uppercase; }
-.honu-profile-result a:hover, .honu-profile-result a:focus-visible { color: #fff; text-decoration: underline; }
+.honu-link-feedback { min-height: 1.3rem; margin: 0 1rem 0.55rem; color: #789198; font: 0.62rem/1.4 Consolas, "Courier New", monospace; }
+.honu-link-feedback[data-state="success"] { color: #86ed70; }
+.honu-link-feedback[data-state="error"] { color: #ff8076; }
+.honu-account-list { max-height: min(45vh, 25rem); display: grid; gap: 0.45rem; overflow-y: auto; padding: 0 1rem 1rem; scrollbar-color: #49b5c2 rgba(4, 18, 24, 0.75); scrollbar-width: thin; }
+.honu-account-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.8rem; padding: 0.7rem 0.8rem; border: 1px solid rgba(65, 172, 185, 0.28); background: rgba(4, 32, 38, 0.86); }
+.honu-account-item > div:first-child { min-width: 0; display: grid; gap: 0.18rem; }
+.honu-account-item strong { overflow: hidden; color: #eafafd; font-size: 0.88rem; text-overflow: ellipsis; white-space: nowrap; }
+.honu-account-item span { color: #79a2a9; font: 0.59rem/1.3 Consolas, "Courier New", monospace; }
+.honu-account-item small { color: #ff8e80; font: 0.55rem/1.3 Consolas, "Courier New", monospace; text-transform: uppercase; }
+.honu-account-item small[data-state="exbr"] { color: #84ed6d; }
+.honu-account-item > div:last-child { display: flex; align-items: center; gap: 0.45rem; }
+.honu-account-item a, .honu-account-item button { min-height: 2rem; display: inline-flex; align-items: center; padding: 0.35rem 0.55rem; border: 1px solid rgba(79, 187, 199, 0.34); color: #66d5df; background: rgba(2, 20, 25, 0.72); font-size: 0.57rem; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+.honu-account-item button { border-color: rgba(255, 104, 92, 0.4); color: #ff8d83; }
+.honu-account-item a:hover, .honu-account-item a:focus-visible { color: #fff; }
+.honu-account-item button:hover, .honu-account-item button:focus-visible { border-color: #ff746b; color: #fff; background: rgba(105, 22, 17, 0.5); }
+.honu-account-empty { min-height: 7rem; display: grid; place-items: center; padding: 1rem; border: 1px dashed rgba(63, 167, 180, 0.24); color: #6f8d93; font: 0.65rem/1.5 Consolas, "Courier New", monospace; text-align: center; }
 
 .flag-stage,
 .flag-texture,
@@ -1310,8 +1342,8 @@
   }
 
   .honu-profile-controls { grid-template-columns: 1fr; }
-  .honu-profile-controls .honu-unlink-button { grid-column: 1; }
-  .honu-profile-result { align-items: flex-start; flex-direction: column; }
+  .honu-account-item { grid-template-columns: 1fr; }
+  .honu-account-item > div:last-child { justify-content: flex-end; }
 
   .avatar-slider-shell { grid-template-columns: 1.85rem minmax(0, 1fr) 1.85rem; }
   .avatar-options button { width: 3.85rem; height: 5rem; flex-basis: 3.85rem; }
