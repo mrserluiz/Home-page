@@ -147,6 +147,38 @@
   --banner-filter: saturate(0.48) hue-rotate(52deg) brightness(0.44) contrast(1.2);
 }
 
+.honu-profile-admin {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+  padding: 0.8rem;
+  border-color: rgba(229, 187, 55, 0.46);
+  background: linear-gradient(135deg, rgba(45, 36, 8, 0.48), rgba(3, 22, 28, 0.96));
+  box-shadow: inset 0 0 1.5rem rgba(229, 187, 55, 0.05);
+}
+
+.honu-profile-admin[hidden] { display: none; }
+.honu-profile-admin header { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.honu-profile-admin header div { display: grid; gap: 0.2rem; }
+.honu-profile-admin header span { color: #c2a33f; font: 0.55rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.11em; }
+.honu-profile-admin header strong { color: #f6df83; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.honu-profile-admin header i { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: #f1c33d; box-shadow: 0 0 0.7rem rgba(241, 195, 61, 0.62); }
+.honu-profile-admin > p { color: #879ea4; font-size: 0.7rem; line-height: 1.45; }
+.honu-profile-admin > label { color: #79cbd4; font: 0.58rem/1 Consolas, "Courier New", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.honu-profile-controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.45rem; }
+.honu-profile-controls input { min-width: 0; min-height: 2.55rem; padding: 0.55rem 0.65rem; border: 1px solid rgba(76, 181, 194, 0.34); outline: 0; color: #e8f9fb; background: rgba(1, 15, 20, 0.92); font: 0.72rem/1.2 Consolas, "Courier New", monospace; }
+.honu-profile-controls input:focus { border-color: #70d2dd; box-shadow: 0 0 0.7rem rgba(76, 190, 202, 0.14); }
+.honu-profile-controls button { min-height: 2.55rem; padding: 0.5rem 0.7rem; border: 1px solid #dfbd4d; color: #f9e69c; background: rgba(63, 48, 8, 0.54); font-size: 0.59rem; font-weight: 850; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; }
+.honu-profile-controls button:hover, .honu-profile-controls button:focus-visible { color: #fff; background: rgba(113, 83, 8, 0.62); }
+.honu-profile-controls button:disabled { opacity: 0.5; cursor: wait; }
+.honu-profile-controls .honu-unlink-button { grid-column: 1 / -1; min-height: 2rem; border-color: rgba(255, 102, 91, 0.46); color: #ff8d83; background: rgba(74, 16, 13, 0.3); }
+.honu-profile-result { display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; min-width: 0; padding-top: 0.55rem; border-top: 1px solid rgba(70, 166, 178, 0.2); }
+.honu-profile-result span { overflow-wrap: anywhere; color: #789198; font: 0.59rem/1.4 Consolas, "Courier New", monospace; }
+.honu-profile-result span[data-state="success"] { color: #86ed70; }
+.honu-profile-result span[data-state="error"] { color: #ff8076; }
+.honu-profile-result a { flex: 0 0 auto; color: #62d4de; font-size: 0.59rem; font-weight: 800; text-transform: uppercase; }
+.honu-profile-result a:hover, .honu-profile-result a:focus-visible { color: #fff; text-decoration: underline; }
+
 .flag-stage,
 .flag-texture,
 .flag-light {
@@ -1276,6 +1308,10 @@
   .member-role-badge {
     margin-left: 0;
   }
+
+  .honu-profile-controls { grid-template-columns: 1fr; }
+  .honu-profile-controls .honu-unlink-button { grid-column: 1; }
+  .honu-profile-result { align-items: flex-start; flex-direction: column; }
 
   .avatar-slider-shell { grid-template-columns: 1.85rem minmax(0, 1fr) 1.85rem; }
   .avatar-options button { width: 3.85rem; height: 5rem; flex-basis: 3.85rem; }
