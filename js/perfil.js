@@ -4,6 +4,7 @@ import {
   addDoc,
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -118,6 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileMedalCatalogFeedback = document.querySelector('[data-profile-medal-catalog-feedback]');
   const profileMedalOperation = document.querySelector('[data-profile-medal-operation]');
   const profileMedalDate = document.querySelector('[data-profile-medal-date]');
+  const honuProfileAdmin = document.querySelector('[data-honu-profile-admin]');
+  const honuCharacterInput = document.querySelector('[data-honu-character-id]');
+  const honuLinkSave = document.querySelector('[data-honu-link-save]');
+  const honuLinkRemove = document.querySelector('[data-honu-link-remove]');
+  const honuLinkFeedback = document.querySelector('[data-honu-link-feedback]');
+  const honuCharacterLink = document.querySelector('[data-honu-character-link]');
 
   if (!card || !avatarImage) return;
 
@@ -138,6 +145,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let feedbackTimer = 0;
   let editVisibilityTimer = 0;
   let activeDetailMedal = null;
+
+  const HONU_ORIGIN = 'https://wt.honu.pw';
+  const HONU_OUTFIT_ID = '37576258294147955';
 
   const medalDate = medal => medal.operationDate?.toDate?.().toLocaleDateString('pt-BR') || medal.operationDate || 'Data não informada';
   const localDateInputValue = (value = new Date()) => {
@@ -275,6 +285,136 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 2400);
     }
   };
+
+  const extractHonuCharacterId = value => {
+    const normalized = String(value || '').trim();
+    if (/^\d{16,20}$/.test(normalized)) return normalized;
+    return normalized.match(/(?:\/c\/|character\/)(\d{16,20})(?:\D|$)/i)?.[1] || '';
+  };
+
+  const renderHonuLink = profile => {
+    const isAdminViewer = viewerProfile?.role === 'admin';
+    if (honuProfileAdmin) honuProfileAdmin.hidden = !isAdminViewer;
+    if (!isAdminViewer) return;
+
+    const characterId = String(profile?.honuCharacterId || '');
+    const characterName = String(profile?.honuCharacterName || '');
+    if (honuCharacterInput) honuCharacterInput.value = characterId;
+    if (honuLinkRemove) honuLinkRemove.hidden = !characterId;
+    if (honuCharacterLink) {
+      honuCharacterLink.hidden = !characterId;
+      honuCharacterLink.href = characterId ? `${HONU_ORIGIN}/c/${encodeURIComponent(characterId)}` : '#';
+    }
+    if (honuLinkFeedback) {
+      honuLinkFeedback.textContent = characterId
+        ? `${characterName || 'Personagem'} // ID ${characterId}`
+        : 'Nenhum personagem vinculado.';
+      honuLinkFeedback.dataset.state = characterId ? 'success' : 'idle';
+    }
+  };
+
+  const fetchHonuCharacter = async characterId => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+    try {
+      const response = await fetch(`${HONU_ORIGIN}/api/character/${encodeURIComponent(characterId)}`, {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+        mode: 'cors',
+        signal: controller.signal
+      });
+      if (response.status === 204) throw new Error('Personagem não encontrado no Honu.');
+      if (!response.ok) throw new Error(`O Honu respondeu com status ${response.status}.`);
+      const character = await response.json();
+      if (String(character?.id || '') !== characterId || !character?.name) throw new Error('O Honu não confirmou este personagem.');
+      return character;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  honuProfileAdmin?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (viewerProfile?.role !== 'admin' || !currentProfileUid || !currentUser) return;
+    const characterId = extractHonuCharacterId(honuCharacterInput?.value);
+    if (!characterId) {
+      if (honuLinkFeedback) {
+        honuLinkFeedback.textContent = 'Informe um ID numérico válido ou cole o link do personagem no Honu.';
+        honuLinkFeedback.dataset.state = 'error';
+      }
+      honuCharacterInput?.focus();
+      return;
+    }
+
+    if (honuLinkSave) honuLinkSave.disabled = true;
+    if (honuLinkFeedback) {
+      honuLinkFeedback.textContent = 'Validando personagem no Honu…';
+      honuLinkFeedback.dataset.state = 'loading';
+    }
+    try {
+      const character = await fetchHonuCharacter(characterId);
+      await updateDoc(doc(db, 'users', currentProfileUid), {
+        honuCharacterId: characterId,
+        honuCharacterName: String(character.name),
+        honuWorldId: Number(character.worldID || 0),
+        honuFactionId: Number(character.factionID || 0),
+        honuOutfitId: String(character.outfitID || ''),
+        honuLinkedAt: serverTimestamp(),
+        honuLinkedBy: currentUser.uid,
+        updatedAt: serverTimestamp()
+      });
+      Object.assign(currentProfile, {
+        honuCharacterId: characterId,
+        honuCharacterName: String(character.name),
+        honuWorldId: Number(character.worldID || 0),
+        honuFactionId: Number(character.factionID || 0),
+        honuOutfitId: String(character.outfitID || '')
+      });
+      renderHonuLink(currentProfile);
+      const outfitWarning = String(character.outfitID || '') === HONU_OUTFIT_ID ? '' : ' O personagem não consta na Outfit EXBR neste momento.';
+      if (honuLinkFeedback) honuLinkFeedback.textContent = `${character.name} vinculado com sucesso.${outfitWarning}`;
+      announce(`Personagem ${character.name} vinculado ao perfil.`);
+    } catch (error) {
+      if (honuLinkFeedback) {
+        honuLinkFeedback.textContent = error?.name === 'AbortError'
+          ? 'O Honu demorou para responder. Tente novamente.'
+          : error?.message || 'Não foi possível validar o personagem.';
+        honuLinkFeedback.dataset.state = 'error';
+      }
+    } finally {
+      if (honuLinkSave) honuLinkSave.disabled = false;
+    }
+  });
+
+  honuLinkRemove?.addEventListener('click', async () => {
+    if (viewerProfile?.role !== 'admin' || !currentProfileUid || !currentProfile?.honuCharacterId) return;
+    const characterName = currentProfile.honuCharacterName || currentProfile.honuCharacterId;
+    if (!window.confirm(`Remover o vínculo de ${characterName} deste perfil?`)) return;
+    honuLinkRemove.disabled = true;
+    try {
+      await updateDoc(doc(db, 'users', currentProfileUid), {
+        honuCharacterId: deleteField(),
+        honuCharacterName: deleteField(),
+        honuWorldId: deleteField(),
+        honuFactionId: deleteField(),
+        honuOutfitId: deleteField(),
+        honuLinkedAt: deleteField(),
+        honuLinkedBy: deleteField(),
+        updatedAt: serverTimestamp()
+      });
+      ['honuCharacterId', 'honuCharacterName', 'honuWorldId', 'honuFactionId', 'honuOutfitId', 'honuLinkedAt', 'honuLinkedBy']
+        .forEach(field => delete currentProfile[field]);
+      renderHonuLink(currentProfile);
+      announce('Vínculo do personagem removido.');
+    } catch (error) {
+      if (honuLinkFeedback) {
+        honuLinkFeedback.textContent = 'Não foi possível remover o vínculo.';
+        honuLinkFeedback.dataset.state = 'error';
+      }
+    } finally {
+      honuLinkRemove.disabled = false;
+    }
+  });
 
   const loadRanks = async () => {
     try {
@@ -801,6 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFavoriteMarker(favoriteFaction, selectedFaction?.dataset.symbol || '◇', 'Facção', factionNames[profile.favoriteFaction], selectedFaction?.dataset.icon || '');
     if (memberBio) memberBio.textContent = profile.bio?.trim() || 'Nenhuma transmissão pessoal registrada.';
     if (bioInput) bioInput.value = profile.bio || '';
+    renderHonuLink(profile);
 
     if (isOwner) {
       avatarImage.setAttribute('role', 'button');
