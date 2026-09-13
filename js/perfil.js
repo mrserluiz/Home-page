@@ -120,11 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const profileMedalOperation = document.querySelector('[data-profile-medal-operation]');
   const profileMedalDate = document.querySelector('[data-profile-medal-date]');
   const honuProfileAdmin = document.querySelector('[data-honu-profile-admin]');
+  const honuAdminOpen = document.querySelector('[data-honu-admin-open]');
+  const honuAdminClose = document.querySelector('[data-honu-admin-close]');
+  const honuLinkForm = document.querySelector('[data-honu-link-form]');
   const honuCharacterInput = document.querySelector('[data-honu-character-id]');
   const honuLinkSave = document.querySelector('[data-honu-link-save]');
-  const honuLinkRemove = document.querySelector('[data-honu-link-remove]');
   const honuLinkFeedback = document.querySelector('[data-honu-link-feedback]');
-  const honuCharacterLink = document.querySelector('[data-honu-character-link]');
+  const honuAccountList = document.querySelector('[data-honu-account-list]');
 
   if (!card || !avatarImage) return;
 
@@ -292,24 +294,105 @@ document.addEventListener('DOMContentLoaded', () => {
     return normalized.match(/(?:\/c\/|character\/)(\d{16,20})(?:\D|$)/i)?.[1] || '';
   };
 
-  const renderHonuLink = profile => {
-    const isAdminViewer = viewerProfile?.role === 'admin';
-    if (honuProfileAdmin) honuProfileAdmin.hidden = !isAdminViewer;
-    if (!isAdminViewer) return;
-
-    const characterId = String(profile?.honuCharacterId || '');
-    const characterName = String(profile?.honuCharacterName || '');
-    if (honuCharacterInput) honuCharacterInput.value = characterId;
-    if (honuLinkRemove) honuLinkRemove.hidden = !characterId;
-    if (honuCharacterLink) {
-      honuCharacterLink.hidden = !characterId;
-      honuCharacterLink.href = characterId ? `${HONU_ORIGIN}/c/${encodeURIComponent(characterId)}` : '#';
+  const honuCharactersFrom = profile => {
+    if (Array.isArray(profile?.honuCharacters)) {
+      return profile.honuCharacters
+        .filter(character => /^\d{16,20}$/.test(String(character?.id || '')))
+        .map(character => ({
+          id: String(character.id),
+          name: String(character.name || 'Personagem'),
+          worldId: Number(character.worldId || 0),
+          factionId: Number(character.factionId || 0),
+          outfitId: String(character.outfitId || ''),
+          linkedAt: character.linkedAt || null,
+          linkedBy: String(character.linkedBy || '')
+        }));
     }
-    if (honuLinkFeedback) {
-      honuLinkFeedback.textContent = characterId
-        ? `${characterName || 'Personagem'} // ID ${characterId}`
-        : 'Nenhum personagem vinculado.';
-      honuLinkFeedback.dataset.state = characterId ? 'success' : 'idle';
+    if (!profile?.honuCharacterId) return [];
+    return [{
+      id: String(profile.honuCharacterId),
+      name: String(profile.honuCharacterName || 'Personagem'),
+      worldId: Number(profile.honuWorldId || 0),
+      factionId: Number(profile.honuFactionId || 0),
+      outfitId: String(profile.honuOutfitId || ''),
+      linkedAt: profile.honuLinkedAt || null,
+      linkedBy: String(profile.honuLinkedBy || '')
+    }];
+  };
+
+  const primaryHonuFields = characters => {
+    const primary = characters[0];
+    if (!primary) {
+      return {
+        honuCharacterId: deleteField(),
+        honuCharacterName: deleteField(),
+        honuWorldId: deleteField(),
+        honuFactionId: deleteField(),
+        honuOutfitId: deleteField(),
+        honuLinkedAt: deleteField(),
+        honuLinkedBy: deleteField()
+      };
+    }
+    return {
+      honuCharacterId: primary.id,
+      honuCharacterName: primary.name,
+      honuWorldId: primary.worldId,
+      honuFactionId: primary.factionId,
+      honuOutfitId: primary.outfitId,
+      honuLinkedAt: primary.linkedAt || Timestamp.now(),
+      honuLinkedBy: primary.linkedBy || currentUser?.uid || ''
+    };
+  };
+
+  const renderHonuLinks = profile => {
+    const isAdminViewer = viewerProfile?.role === 'admin';
+    if (honuAdminOpen) honuAdminOpen.hidden = !isAdminViewer;
+    if (!isAdminViewer) {
+      if (honuProfileAdmin?.open) honuProfileAdmin.close();
+      return;
+    }
+
+    const characters = honuCharactersFrom(profile);
+    if (honuAccountList) {
+      honuAccountList.replaceChildren();
+      if (!characters.length) {
+        const empty = document.createElement('div');
+        empty.className = 'honu-account-empty';
+        empty.textContent = 'Nenhuma conta Honu associada a este membro.';
+        honuAccountList.append(empty);
+      }
+      characters.forEach((character, index) => {
+        const item = document.createElement('article');
+        item.className = 'honu-account-item';
+        const copy = document.createElement('div');
+        const name = document.createElement('strong');
+        name.textContent = character.name;
+        const id = document.createElement('span');
+        id.textContent = `${index === 0 ? 'PRINCIPAL // ' : ''}ID ${character.id}`;
+        const outfit = document.createElement('small');
+        outfit.dataset.state = character.outfitId === HONU_OUTFIT_ID ? 'exbr' : 'external';
+        outfit.textContent = character.outfitId === HONU_OUTFIT_ID ? 'Outfit EXBR confirmada' : 'Fora da Outfit EXBR no momento';
+        copy.append(name, id, outfit);
+        const actions = document.createElement('div');
+        const link = document.createElement('a');
+        link.href = `${HONU_ORIGIN}/c/${encodeURIComponent(character.id)}`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Abrir ↗';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.dataset.honuAccountRemove = character.id;
+        remove.textContent = 'Remover';
+        actions.append(link, remove);
+        item.append(copy, actions);
+        honuAccountList.append(item);
+      });
+    }
+    if (honuLinkFeedback && honuLinkFeedback.dataset.state !== 'error') {
+      honuLinkFeedback.textContent = characters.length
+        ? `${characters.length} conta${characters.length === 1 ? '' : 's'} vinculada${characters.length === 1 ? '' : 's'} a este perfil.`
+        : 'Nenhuma conta vinculada.';
+      honuLinkFeedback.dataset.state = characters.length ? 'success' : 'idle';
     }
   };
 
@@ -333,7 +416,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  honuProfileAdmin?.addEventListener('submit', async event => {
+  honuAdminOpen?.addEventListener('click', () => {
+    if (viewerProfile?.role !== 'admin' || !honuProfileAdmin) return;
+    if (honuLinkFeedback) delete honuLinkFeedback.dataset.state;
+    renderHonuLinks(currentProfile);
+    honuProfileAdmin.showModal();
+    window.setTimeout(() => honuCharacterInput?.focus(), 0);
+  });
+  honuAdminClose?.addEventListener('click', () => honuProfileAdmin?.close());
+  honuProfileAdmin?.addEventListener('click', event => {
+    if (event.target === honuProfileAdmin) honuProfileAdmin.close();
+  });
+
+  honuLinkForm?.addEventListener('submit', async event => {
     event.preventDefault();
     if (viewerProfile?.role !== 'admin' || !currentProfileUid || !currentUser) return;
     const characterId = extractHonuCharacterId(honuCharacterInput?.value);
@@ -353,26 +448,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     try {
       const character = await fetchHonuCharacter(characterId);
+      const characters = honuCharactersFrom(currentProfile);
+      if (characters.some(entry => entry.id === characterId)) throw new Error('Este personagem já está vinculado ao perfil.');
+      const linkedCharacter = {
+        id: characterId,
+        name: String(character.name),
+        worldId: Number(character.worldID || 0),
+        factionId: Number(character.factionID || 0),
+        outfitId: String(character.outfitID || ''),
+        linkedAt: Timestamp.now(),
+        linkedBy: currentUser.uid
+      };
+      const nextCharacters = [...characters, linkedCharacter];
       await updateDoc(doc(db, 'users', currentProfileUid), {
-        honuCharacterId: characterId,
-        honuCharacterName: String(character.name),
-        honuWorldId: Number(character.worldID || 0),
-        honuFactionId: Number(character.factionID || 0),
-        honuOutfitId: String(character.outfitID || ''),
-        honuLinkedAt: serverTimestamp(),
-        honuLinkedBy: currentUser.uid,
+        honuCharacters: nextCharacters,
+        ...primaryHonuFields(nextCharacters),
         updatedAt: serverTimestamp()
       });
-      Object.assign(currentProfile, {
-        honuCharacterId: characterId,
-        honuCharacterName: String(character.name),
-        honuWorldId: Number(character.worldID || 0),
-        honuFactionId: Number(character.factionID || 0),
-        honuOutfitId: String(character.outfitID || '')
-      });
-      renderHonuLink(currentProfile);
+      currentProfile.honuCharacters = nextCharacters;
+      Object.assign(currentProfile, primaryHonuFields(nextCharacters));
+      if (honuCharacterInput) honuCharacterInput.value = '';
+      renderHonuLinks(currentProfile);
       const outfitWarning = String(character.outfitID || '') === HONU_OUTFIT_ID ? '' : ' O personagem não consta na Outfit EXBR neste momento.';
-      if (honuLinkFeedback) honuLinkFeedback.textContent = `${character.name} vinculado com sucesso.${outfitWarning}`;
+      if (honuLinkFeedback) {
+        honuLinkFeedback.textContent = `${character.name} adicionado com sucesso.${outfitWarning}`;
+        honuLinkFeedback.dataset.state = 'success';
+      }
       announce(`Personagem ${character.name} vinculado ao perfil.`);
     } catch (error) {
       if (honuLinkFeedback) {
@@ -386,25 +487,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  honuLinkRemove?.addEventListener('click', async () => {
-    if (viewerProfile?.role !== 'admin' || !currentProfileUid || !currentProfile?.honuCharacterId) return;
-    const characterName = currentProfile.honuCharacterName || currentProfile.honuCharacterId;
+  honuAccountList?.addEventListener('click', async event => {
+    const removeButton = event.target.closest('[data-honu-account-remove]');
+    if (!removeButton || viewerProfile?.role !== 'admin' || !currentProfileUid) return;
+    const characters = honuCharactersFrom(currentProfile);
+    const selected = characters.find(character => character.id === removeButton.dataset.honuAccountRemove);
+    if (!selected) return;
+    const characterName = selected.name || selected.id;
     if (!window.confirm(`Remover o vínculo de ${characterName} deste perfil?`)) return;
-    honuLinkRemove.disabled = true;
+    removeButton.disabled = true;
     try {
+      const nextCharacters = characters.filter(character => character.id !== selected.id);
       await updateDoc(doc(db, 'users', currentProfileUid), {
-        honuCharacterId: deleteField(),
-        honuCharacterName: deleteField(),
-        honuWorldId: deleteField(),
-        honuFactionId: deleteField(),
-        honuOutfitId: deleteField(),
-        honuLinkedAt: deleteField(),
-        honuLinkedBy: deleteField(),
+        honuCharacters: nextCharacters,
+        ...primaryHonuFields(nextCharacters),
         updatedAt: serverTimestamp()
       });
-      ['honuCharacterId', 'honuCharacterName', 'honuWorldId', 'honuFactionId', 'honuOutfitId', 'honuLinkedAt', 'honuLinkedBy']
-        .forEach(field => delete currentProfile[field]);
-      renderHonuLink(currentProfile);
+      currentProfile.honuCharacters = nextCharacters;
+      if (nextCharacters.length) {
+        Object.assign(currentProfile, primaryHonuFields(nextCharacters));
+      } else {
+        ['honuCharacterId', 'honuCharacterName', 'honuWorldId', 'honuFactionId', 'honuOutfitId', 'honuLinkedAt', 'honuLinkedBy']
+          .forEach(field => delete currentProfile[field]);
+      }
+      renderHonuLinks(currentProfile);
+      if (honuLinkFeedback) honuLinkFeedback.textContent = `${characterName} removido do perfil.`;
       announce('Vínculo do personagem removido.');
     } catch (error) {
       if (honuLinkFeedback) {
@@ -412,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
         honuLinkFeedback.dataset.state = 'error';
       }
     } finally {
-      honuLinkRemove.disabled = false;
+      removeButton.disabled = false;
     }
   });
 
@@ -941,7 +1048,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFavoriteMarker(favoriteFaction, selectedFaction?.dataset.symbol || '◇', 'Facção', factionNames[profile.favoriteFaction], selectedFaction?.dataset.icon || '');
     if (memberBio) memberBio.textContent = profile.bio?.trim() || 'Nenhuma transmissão pessoal registrada.';
     if (bioInput) bioInput.value = profile.bio || '';
-    renderHonuLink(profile);
+    renderHonuLinks(profile);
 
     if (isOwner) {
       avatarImage.setAttribute('role', 'button');
