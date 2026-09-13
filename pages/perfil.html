@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="../css/reset.css?v=20260906-2">
   <link rel="stylesheet" href="../css/base.css?v=20260906-10">
   <link rel="stylesheet" href="../css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260912-8">
+  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260913-1">
 </head>
 <body class="member-page has-tactical-dock">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -106,6 +106,24 @@
             <strong data-profile-edit-label>Editar perfil</strong>
           </button>
         </article>
+
+        <form class="honu-profile-admin tactical-panel" data-honu-profile-admin hidden>
+          <header>
+            <div><span>ADMINISTRAÇÃO // HONU</span><strong>Vínculo do personagem</strong></div>
+            <i aria-hidden="true"></i>
+          </header>
+          <p>Associe este perfil ao ID do personagem no PlanetSide 2. Também é possível colar o link completo do Honu.</p>
+          <label for="honu-character-id">ID do personagem</label>
+          <div class="honu-profile-controls">
+            <input id="honu-character-id" type="text" inputmode="numeric" maxlength="120" placeholder="Ex.: 5428… ou https://wt.honu.pw/c/…" autocomplete="off" data-honu-character-id>
+            <button type="submit" data-honu-link-save>Validar e vincular</button>
+            <button class="honu-unlink-button" type="button" data-honu-link-remove hidden>Remover</button>
+          </div>
+          <div class="honu-profile-result">
+            <span data-honu-link-feedback>Nenhum personagem vinculado.</span>
+            <a href="#" target="_blank" rel="noopener noreferrer" data-honu-character-link hidden>Ver personagem no Honu ↗</a>
+          </div>
+        </form>
 
         <div class="profile-customizer" id="profile-customizer" aria-label="Personalização do perfil" hidden>
           <div class="customizer-group">
@@ -261,6 +279,6 @@
   </nav>
 
   <script src="../js/main.js?v=20260907-2" defer></script>
-  <script src="../js/perfil.js?v=20260912-7" type="module"></script>
+  <script src="../js/perfil.js?v=20260913-1" type="module"></script>
 </body>
 </html>
