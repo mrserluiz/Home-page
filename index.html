@@ -39,7 +39,7 @@
   <link rel="stylesheet" href="css/reset.css?v=20260906-1">
   <link rel="stylesheet" href="css/base.css?v=20260906-11">
   <link rel="stylesheet" href="css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="css/pages/home.css?v=20260907-15">
+  <link rel="stylesheet" href="css/pages/home.css?v=20260914-1">
 
   <script type="application/ld+json">
   {
@@ -112,7 +112,14 @@
           </div>
         </div>
 
-        <aside class="command-panel" aria-label="Central EXBR" data-reveal>
+        <div class="hero-command-stack" data-reveal>
+          <aside class="home-online-summary" aria-label="Jogadores EXBR online agora" data-home-honu-status="loading">
+            <span>Online agora</span>
+            <strong data-home-honu-online>--</strong>
+            <small data-home-honu-feedback>Consultando Honu…</small>
+          </aside>
+
+        <aside class="command-panel" aria-label="Central EXBR">
           <div class="panel-topline">
             <span>EXBR // COMMAND</span>
             <span class="panel-code">SYS-01</span>
@@ -135,6 +142,7 @@
             <span>Sistema de comunicação pronto</span>
           </div>
         </aside>
+        </div>
       </div>
 
       <div class="hero-rail hero-rail-bottom" aria-hidden="true">
@@ -253,7 +261,7 @@
     </div>
   </footer>
 
-  <script src="js/main.js?v=20260907-2" defer></script>
+  <script src="js/main.js?v=20260914-1" defer></script>
   <script src="js/operations.js?v=20260906-13" defer></script>
   <script src="js/home-operations.js?v=20260907-1" type="module"></script>
   <script src="js/session-ui.js?v=20260907-1" type="module"></script>
