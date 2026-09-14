@@ -127,6 +127,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const honuLinkSave = document.querySelector('[data-honu-link-save]');
   const honuLinkFeedback = document.querySelector('[data-honu-link-feedback]');
   const honuAccountList = document.querySelector('[data-honu-account-list]');
+  const honuLifetimeKills = document.querySelector('[data-honu-lifetime-kills]');
+  const honuDailyDate = document.querySelector('[data-honu-daily-date]');
+  const honuDailyKills = document.querySelector('[data-honu-daily-kills]');
+  const honuDailyDeaths = document.querySelector('[data-honu-daily-deaths]');
+  const honuDailyAssists = document.querySelector('[data-honu-daily-assists]');
+  const honuStatsFeedback = document.querySelector('[data-honu-stats-feedback]');
+  const honuCombatPanel = document.querySelector('.member-combat-panel');
+  const honuCombatSummary = document.querySelector('.member-combat-summary');
 
   if (!card || !avatarImage) return;
 
@@ -147,6 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let feedbackTimer = 0;
   let editVisibilityTimer = 0;
   let activeDetailMedal = null;
+  let honuStatsRequestVersion = 0;
 
   const HONU_ORIGIN = 'https://wt.honu.pw';
   const HONU_OUTFIT_ID = '37576258294147955';
@@ -167,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     max: 'MAX'
   };
   const factionNames = { tr: 'Terran Republic', nc: 'New Conglomerate', vs: 'Vanu Sovereignty', nso: 'Nanite Systems Operatives' };
+  const honuFactionKeys = { 1: 'vs', 2: 'nc', 3: 'tr', 4: 'nso' };
 
   const effectiveMedal = medal => {
     const definition = medalDefinitions.get(medal.catalogId);
@@ -416,6 +426,99 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const fetchHonuCharacterStats = async characterId => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(`${HONU_ORIGIN}/api/character/${encodeURIComponent(characterId)}/stats`, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal
+      });
+      if (!response.ok) throw new Error(`Honu respondeu com status ${response.status}.`);
+      const stats = await response.json();
+      if (!Array.isArray(stats)) throw new Error('O Honu retornou estatísticas em formato inesperado.');
+      return stats;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  const totalHonuStat = (statCollections, names, field) => {
+    const acceptedNames = new Set(names);
+    const matching = statCollections.flat().filter(stat => acceptedNames.has(String(stat?.statName || '').toLowerCase()));
+    return {
+      found: matching.length > 0,
+      value: matching.reduce((total, stat) => total + (Number(stat?.[field]) || 0), 0)
+    };
+  };
+
+  const displayHonuStat = (element, stat) => {
+    if (!element) return;
+    element.textContent = stat.found ? Math.max(0, Math.round(stat.value)).toLocaleString('pt-BR') : '—';
+  };
+
+  const loadHonuProfileData = async profile => {
+    const requestVersion = ++honuStatsRequestVersion;
+    const characters = honuCharactersFrom(profile);
+    if (honuDailyDate) honuDailyDate.textContent = new Intl.DateTimeFormat('pt-BR').format(new Date());
+
+    const primaryFactionKey = honuFactionKeys[Number(characters[0]?.factionId || 0)];
+    if (primaryFactionKey) {
+      const faction = factions.get(primaryFactionKey);
+      renderFavoriteMarker(
+        favoriteFaction,
+        faction?.dataset.symbol || '◇',
+        'Facção',
+        factionNames[primaryFactionKey],
+        faction?.dataset.icon || ''
+      );
+    }
+
+    if (!characters.length) {
+      [honuLifetimeKills, honuDailyKills, honuDailyDeaths, honuDailyAssists].forEach(element => {
+        if (element) element.textContent = '—';
+      });
+      if (honuStatsFeedback) honuStatsFeedback.textContent = 'Vincule uma conta Honu para carregar a telemetria.';
+      if (honuCombatPanel) honuCombatPanel.dataset.state = 'idle';
+      if (honuCombatSummary) honuCombatSummary.dataset.state = 'idle';
+      return;
+    }
+
+    [honuLifetimeKills, honuDailyKills, honuDailyDeaths, honuDailyAssists].forEach(element => {
+      if (element) element.textContent = '--';
+    });
+    if (honuStatsFeedback) honuStatsFeedback.textContent = `Somando ${characters.length} conta${characters.length === 1 ? '' : 's'} vinculada${characters.length === 1 ? '' : 's'}…`;
+    if (honuCombatPanel) honuCombatPanel.dataset.state = 'loading';
+    if (honuCombatSummary) honuCombatSummary.dataset.state = 'loading';
+
+    const results = await Promise.allSettled(characters.map(character => fetchHonuCharacterStats(character.id)));
+    if (requestVersion !== honuStatsRequestVersion) return;
+    const statCollections = results.filter(result => result.status === 'fulfilled').map(result => result.value);
+    const failedCount = results.length - statCollections.length;
+
+    if (!statCollections.length) {
+      [honuLifetimeKills, honuDailyKills, honuDailyDeaths, honuDailyAssists].forEach(element => {
+        if (element) element.textContent = '—';
+      });
+      if (honuStatsFeedback) honuStatsFeedback.textContent = 'A telemetria do Honu está temporariamente indisponível.';
+      if (honuCombatPanel) honuCombatPanel.dataset.state = 'error';
+      if (honuCombatSummary) honuCombatSummary.dataset.state = 'error';
+      return;
+    }
+
+    displayHonuStat(honuLifetimeKills, totalHonuStat(statCollections, ['kills'], 'valueForever'));
+    displayHonuStat(honuDailyKills, totalHonuStat(statCollections, ['kills'], 'valueDaily'));
+    displayHonuStat(honuDailyDeaths, totalHonuStat(statCollections, ['deaths'], 'valueDaily'));
+    displayHonuStat(honuDailyAssists, totalHonuStat(statCollections, ['assists', 'assist', 'kill_assists', 'kill_assist', 'assist_count'], 'valueDaily'));
+    if (honuStatsFeedback) {
+      honuStatsFeedback.textContent = failedCount
+        ? `${statCollections.length} de ${characters.length} contas atualizadas; o Honu não respondeu para ${failedCount}.`
+        : `Dados reais somados de ${characters.length} conta${characters.length === 1 ? '' : 's'} vinculada${characters.length === 1 ? '' : 's'}.`;
+    }
+    if (honuCombatPanel) honuCombatPanel.dataset.state = failedCount ? 'partial' : 'success';
+    if (honuCombatSummary) honuCombatSummary.dataset.state = failedCount ? 'partial' : 'success';
+  };
+
   honuAdminOpen?.addEventListener('click', () => {
     if (viewerProfile?.role !== 'admin' || !honuProfileAdmin) return;
     if (honuLinkFeedback) delete honuLinkFeedback.dataset.state;
@@ -469,6 +572,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Object.assign(currentProfile, primaryHonuFields(nextCharacters));
       if (honuCharacterInput) honuCharacterInput.value = '';
       renderHonuLinks(currentProfile);
+      loadHonuProfileData(currentProfile);
       const outfitWarning = String(character.outfitID || '') === HONU_OUTFIT_ID ? '' : ' O personagem não consta na Outfit EXBR neste momento.';
       if (honuLinkFeedback) {
         honuLinkFeedback.textContent = `${character.name} adicionado com sucesso.${outfitWarning}`;
@@ -511,6 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .forEach(field => delete currentProfile[field]);
       }
       renderHonuLinks(currentProfile);
+      loadHonuProfileData(currentProfile);
       if (honuLinkFeedback) honuLinkFeedback.textContent = `${characterName} removido do perfil.`;
       announce('Vínculo do personagem removido.');
     } catch (error) {
@@ -1049,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (memberBio) memberBio.textContent = profile.bio?.trim() || 'Nenhuma transmissão pessoal registrada.';
     if (bioInput) bioInput.value = profile.bio || '';
     renderHonuLinks(profile);
+    loadHonuProfileData(profile);
 
     if (isOwner) {
       avatarImage.setAttribute('role', 'button');
