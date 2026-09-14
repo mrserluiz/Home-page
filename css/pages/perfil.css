@@ -297,24 +297,22 @@
 }
 
 .member-combat-summary {
-  position: absolute;
-  top: 5.25rem;
-  left: 0.85rem;
-  right: 5.45rem;
-  z-index: 5;
+  position: relative;
+  z-index: 2;
   min-height: 2rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.7rem;
-  padding: 0.42rem 0.65rem;
+  margin-top: 0.55rem;
+  padding: 0.52rem 0.75rem;
+  border: 1px solid rgba(82, 185, 198, 0.2);
   border-left: 2px solid rgba(224, 184, 50, 0.76);
-  border-bottom: 1px solid rgba(82, 185, 198, 0.24);
   color: #92afb5;
-  background: linear-gradient(90deg, rgba(3, 21, 27, 0.86), rgba(3, 19, 25, 0.5));
+  background: linear-gradient(90deg, rgba(3, 21, 27, 0.94), rgba(3, 19, 25, 0.72));
   backdrop-filter: blur(7px);
   font: 0.58rem/1 Consolas, "Courier New", monospace;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.075em;
   text-transform: uppercase;
 }
 
@@ -1390,8 +1388,6 @@
   .member-nameplate {
     grid-template-columns: 1fr;
   }
-
-  .member-combat-summary { top: 5.55rem; right: 6.65rem; }
 
   .member-operator-label {
     display: none;
