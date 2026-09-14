@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="../css/reset.css?v=20260906-2">
   <link rel="stylesheet" href="../css/base.css?v=20260906-10">
   <link rel="stylesheet" href="../css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260913-2">
+  <link rel="stylesheet" href="../css/pages/perfil.css?v=20260914-1">
 </head>
 <body class="member-page has-tactical-dock">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -91,6 +91,11 @@
               <strong data-member-rank data-rank-id="soldado">Soldado</strong>
               <em class="member-role-badge" data-member-role data-role="member">Membro</em>
             </span>
+          </div>
+
+          <div class="member-combat-summary" title="Total somado das contas vinculadas ao Honu">
+            <span>Inimigos abatidos</span>
+            <strong data-honu-lifetime-kills>--</strong>
           </div>
 
           <img class="member-avatar" data-member-avatar src="https://res.cloudinary.com/uofznsju/image/upload/f_auto,q_auto,c_limit,w_900,h_1100/v1789231970/NS_light_assault" alt="Avatar selecionado: NS Light Assault" role="button" tabindex="0" aria-label="Mostrar opções de edição do perfil">
@@ -173,6 +178,19 @@
           <header><span>TRANSMISSÃO // OPERADOR</span><i aria-hidden="true"></i></header>
           <h2 id="member-bio-title">Sobre o membro</h2>
           <p data-member-bio>Nenhuma transmissão pessoal registrada.</p>
+        </section>
+
+        <section class="member-combat-panel tactical-panel" aria-labelledby="member-combat-title">
+          <header>
+            <h2 id="member-combat-title">Estatísticas</h2>
+            <time data-honu-daily-date>--/--/----</time>
+          </header>
+          <div class="member-combat-grid">
+            <div><span>Mortes inimigas</span><strong data-honu-daily-kills>--</strong></div>
+            <div><span>Mortes</span><strong data-honu-daily-deaths>--</strong></div>
+            <div><span>Assistências</span><strong data-honu-daily-assists>--</strong></div>
+          </div>
+          <p data-honu-stats-feedback>Vincule uma conta Honu para carregar a telemetria.</p>
         </section>
 
         <section class="member-operations-panel tactical-panel" aria-labelledby="member-operations-title">
@@ -281,6 +299,6 @@
   </nav>
 
   <script src="../js/main.js?v=20260907-2" defer></script>
-  <script src="../js/perfil.js?v=20260913-2" type="module"></script>
+  <script src="../js/perfil.js?v=20260914-1" type="module"></script>
 </body>
 </html>
