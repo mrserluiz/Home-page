@@ -172,4 +172,52 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-current-year]').forEach(element => {
     element.textContent = String(new Date().getFullYear());
   });
+
+  const homeHonuPanel = document.querySelector('[data-home-honu-status]');
+  const homeHonuOnline = document.querySelector('[data-home-honu-online]');
+  const homeHonuFeedback = document.querySelector('[data-home-honu-feedback]');
+  if (homeHonuPanel && homeHonuOnline) {
+    const endpoint = 'https://wt.honu.pw/api/outfit/37576258294147955/online';
+    let request = null;
+    let refreshTimer = 0;
+
+    const loadOnlineCount = async () => {
+      if (request || document.hidden) return;
+      const controller = new AbortController();
+      request = controller;
+      const timeout = window.setTimeout(() => controller.abort(), 12000);
+      homeHonuPanel.dataset.homeHonuStatus = 'loading';
+      if (homeHonuFeedback) homeHonuFeedback.textContent = 'Consultando Honu…';
+      try {
+        const response = await fetch(endpoint, { headers: { Accept: 'application/json' }, signal: controller.signal });
+        if (!response.ok) throw new Error(`Honu respondeu com status ${response.status}`);
+        const payload = await response.json();
+        if (!Array.isArray(payload)) throw new Error('Formato inesperado do Honu');
+        const onlineIds = new Set(payload
+          .filter(player => player?.online !== false && player?.player?.online !== false)
+          .map(player => String(player?.characterID || player?.characterId || player?.id || ''))
+          .filter(Boolean));
+        homeHonuOnline.textContent = String(onlineIds.size).padStart(2, '0');
+        homeHonuPanel.dataset.homeHonuStatus = 'success';
+        if (homeHonuFeedback) homeHonuFeedback.textContent = 'EXBR conectados no jogo';
+      } catch (error) {
+        if (homeHonuOnline.textContent === '--') homeHonuOnline.textContent = '—';
+        homeHonuPanel.dataset.homeHonuStatus = 'error';
+        if (homeHonuFeedback) homeHonuFeedback.textContent = 'Leitura temporariamente indisponível';
+      } finally {
+        window.clearTimeout(timeout);
+        request = null;
+      }
+    };
+
+    const startOnlineUpdates = () => {
+      window.clearInterval(refreshTimer);
+      if (document.hidden) return;
+      loadOnlineCount();
+      refreshTimer = window.setInterval(loadOnlineCount, 60000);
+    };
+
+    document.addEventListener('visibilitychange', startOnlineUpdates);
+    startOnlineUpdates();
+  }
 });
