@@ -23,6 +23,7 @@ const honuRefresh = document.querySelector('[data-honu-refresh]');
 let members = [];
 let ranks = new Map();
 let medalDefinitions = new Map();
+let premiumAvatarDefinitions = new Map();
 let galleryItems = [];
 let currentUser = null;
 let viewerProfile = null;
@@ -195,6 +196,13 @@ const publicActivity = participation => ({
   joinedAt: participation.joinedAt || null
 });
 
+const profileAvatarId = profile => {
+  const avatarId = profile?.avatarId || DEFAULT_AVATAR_ID;
+  return (profile?.premiumAvatarIds || []).includes(avatarId) ? avatarId : normalizeAvatarId(avatarId);
+};
+
+const communityAvatarSource = profile => premiumAvatarDefinitions.get(profileAvatarId(profile))?.imageUrl || avatarSource(profileAvatarId(profile), 'thumb');
+
 const ensureViewerPublicProfile = async user => {
   const profileSnapshot = await getDoc(doc(db, 'users', user.uid));
   if (!profileSnapshot.exists()) return null;
@@ -217,7 +225,8 @@ const ensureViewerPublicProfile = async user => {
   await setDoc(doc(db, 'publicProfiles', user.uid), {
     displayName: profile.displayName || user.displayName || 'Membro EXBR',
     rankId: profile.rankId || 'soldado',
-    avatarId: normalizeAvatarId(profile.avatarId || DEFAULT_AVATAR_ID),
+    avatarId: profileAvatarId(profile),
+    premiumAvatarIds: Array.isArray(profile.premiumAvatarIds) ? profile.premiumAvatarIds : [],
     bannerId: normalizeBannerId(profile.bannerId || DEFAULT_BANNER_ID),
     bio: profile.bio || '',
     favoriteClass: profile.favoriteClass || '',
@@ -263,7 +272,7 @@ const render = () => {
     card.className = 'community-member';
     const avatar = document.createElement('img');
     avatar.className = 'community-avatar';
-    avatar.src = avatarSource(member.avatarId, 'thumb');
+    avatar.src = communityAvatarSource(member);
     avatar.alt = '';
 
     const identity = document.createElement('div');
@@ -441,15 +450,17 @@ galleryForm?.addEventListener('submit', async event => {
 
 const loadCommunity = async user => {
   try { viewerProfile = await ensureViewerPublicProfile(user); } catch (error) { /* O restante da comunidade ainda pode ser carregado. */ }
-  const [rankResponse, snapshot, catalogSnapshot, gallerySnapshot] = await Promise.all([
+  const [rankResponse, snapshot, catalogSnapshot, gallerySnapshot, premiumAvatarSnapshot] = await Promise.all([
     fetch('../data/patentes.json'),
     getDocs(collection(db, 'publicProfiles')),
     getDocs(collection(db, 'medalCatalog')),
-    getDocs(collection(db, 'communityGallery')).catch(() => null)
+    getDocs(collection(db, 'communityGallery')).catch(() => null),
+    getDocs(collection(db, 'premiumAvatarCatalog')).catch(() => null)
   ]);
   const rankData = await rankResponse.json();
   ranks = new Map(rankData.patentes.map(rank => [rank.id, rank.nome]));
   medalDefinitions = new Map(catalogSnapshot.docs.map(item => [item.id, item.data()]));
+  premiumAvatarDefinitions = new Map(premiumAvatarSnapshot ? premiumAvatarSnapshot.docs.map(item => [item.id, item.data()]) : []);
   members = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
     .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || '', 'pt-BR'));
   galleryItems = gallerySnapshot
