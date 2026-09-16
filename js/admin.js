@@ -48,12 +48,17 @@ const adminTitle = document.querySelector('[data-admin-title]');
 const galleryForm = document.querySelector('[data-gallery-form]');
 const galleryAdminList = document.querySelector('[data-gallery-admin-list]');
 const galleryAdminFeedback = document.querySelector('[data-gallery-admin-feedback]');
+const premiumAvatarForm = document.querySelector('[data-premium-avatar-form]');
+const premiumAvatarList = document.querySelector('[data-premium-avatar-list]');
+const premiumAvatarFeedback = document.querySelector('[data-premium-avatar-feedback]');
+const premiumAvatarCancel = document.querySelector('[data-premium-avatar-cancel]');
 
 let users = [];
 let ranks = [];
 let medals = [];
 let selectedUser = null;
 let galleryItems = [];
+let premiumAvatars = [];
 let currentAdmin = null;
 let stopUsersListener = null;
 
@@ -87,13 +92,23 @@ const rankName = rankId => ranks.find(rank => rank.id === rankId)?.nome || 'Sold
 const publicProfileData = user => ({
   displayName: user.displayName || user.email?.split('@')[0] || 'Membro EXBR',
   rankId: user.rankId || 'soldado',
-  avatarId: normalizeAvatarId(user.avatarId || DEFAULT_AVATAR_ID),
+  avatarId: (user.premiumAvatarIds || []).includes(user.avatarId) ? user.avatarId : normalizeAvatarId(user.avatarId || DEFAULT_AVATAR_ID),
+  premiumAvatarIds: Array.isArray(user.premiumAvatarIds) ? user.premiumAvatarIds : [],
   bannerId: normalizeBannerId(user.bannerId || DEFAULT_BANNER_ID),
   bio: user.bio || '',
   favoriteClass: user.favoriteClass || '',
   favoriteFaction: user.favoriteFaction || '',
   updatedAt: serverTimestamp()
 });
+
+const setPremiumAvatarFeedback = (message, state = 'info') => {
+  if (!premiumAvatarFeedback) return;
+  premiumAvatarFeedback.textContent = message;
+  premiumAvatarFeedback.dataset.state = state;
+};
+
+const premiumAvatarDefinition = avatarId => premiumAvatars.find(avatar => avatar.id === avatarId);
+const userAvatarSource = user => premiumAvatarDefinition(user.avatarId)?.imageUrl || avatarSource(user.avatarId, 'thumb');
 
 const publicMedal = medal => {
   const definition = medals.find(item => item.id === medal.catalogId);
@@ -151,7 +166,7 @@ const renderUsers = () => {
     row.setAttribute('aria-label', `${user.displayName || 'Membro EXBR'}, ${rankName(user.rankId)}. Pressione Enter para abrir o perfil.`);
 
     const avatar = document.createElement('img');
-    avatar.src = avatarSource(user.avatarId, 'thumb');
+    avatar.src = userAvatarSource(user);
     avatar.alt = '';
 
     const copy = document.createElement('div');
@@ -558,11 +573,236 @@ const openMedalDialog = user => {
   renderMedals();
 };
 
+const resetPremiumAvatarForm = () => {
+  if (!premiumAvatarForm) return;
+  premiumAvatarForm.reset();
+  premiumAvatarForm.elements.avatarId.value = '';
+  if (premiumAvatarCancel) premiumAvatarCancel.hidden = true;
+};
+
+const editPremiumAvatar = avatar => {
+  if (!premiumAvatarForm) return;
+  premiumAvatarForm.elements.avatarId.value = avatar.id;
+  premiumAvatarForm.elements.name.value = avatar.name || '';
+  premiumAvatarForm.elements.imageUrl.value = avatar.imageUrl || '';
+  if (premiumAvatarCancel) premiumAvatarCancel.hidden = false;
+  setPremiumAvatarFeedback(`Editando ${avatar.name}.`);
+  premiumAvatarForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+const grantPremiumAvatar = async (avatar, userId, button) => {
+  const user = users.find(item => item.id === userId);
+  if (!user) return;
+  const nextIds = [...new Set([...(user.premiumAvatarIds || []), avatar.id])];
+  button.disabled = true;
+  setPremiumAvatarFeedback(`Concedendo ${avatar.name} para ${user.displayName || user.email}…`);
+  try {
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users', user.id), { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() });
+    batch.set(doc(db, 'publicProfiles', user.id), { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() }, { merge: true });
+    await batch.commit();
+    user.premiumAvatarIds = nextIds;
+    renderPremiumAvatars();
+    setPremiumAvatarFeedback(`${avatar.name} liberado para ${user.displayName || user.email}.`, 'success');
+  } catch (error) {
+    setPremiumAvatarFeedback('Não foi possível conceder o avatar premium.', 'error');
+    button.disabled = false;
+  }
+};
+
+const revokePremiumAvatar = async (avatar, user, button) => {
+  if (!window.confirm(`Remover o acesso de ${user.displayName || user.email} ao avatar ${avatar.name}?`)) return;
+  const nextIds = (user.premiumAvatarIds || []).filter(id => id !== avatar.id);
+  const wasSelected = user.avatarId === avatar.id;
+  button.disabled = true;
+  setPremiumAvatarFeedback(`Removendo ${avatar.name} de ${user.displayName || user.email}…`);
+  try {
+    const privateUpdate = { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() };
+    const publicUpdate = { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() };
+    if (wasSelected) {
+      privateUpdate.avatarId = DEFAULT_AVATAR_ID;
+      publicUpdate.avatarId = DEFAULT_AVATAR_ID;
+    }
+    const batch = writeBatch(db);
+    batch.update(doc(db, 'users', user.id), privateUpdate);
+    batch.set(doc(db, 'publicProfiles', user.id), publicUpdate, { merge: true });
+    await batch.commit();
+    user.premiumAvatarIds = nextIds;
+    if (wasSelected) user.avatarId = DEFAULT_AVATAR_ID;
+    renderPremiumAvatars();
+    renderUsers();
+    setPremiumAvatarFeedback('Acesso premium removido.', 'success');
+  } catch (error) {
+    setPremiumAvatarFeedback('Não foi possível remover o acesso premium.', 'error');
+    button.disabled = false;
+  }
+};
+
+const deletePremiumAvatar = async avatar => {
+  if (!window.confirm(`Excluir ${avatar.name} do catálogo premium e remover o acesso de todos os jogadores?`)) return;
+  setPremiumAvatarFeedback(`Excluindo ${avatar.name}…`);
+  try {
+    const batch = writeBatch(db);
+    users.forEach(user => {
+      if (!(user.premiumAvatarIds || []).includes(avatar.id)) return;
+      const nextIds = user.premiumAvatarIds.filter(id => id !== avatar.id);
+      const privateUpdate = { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() };
+      const publicUpdate = { premiumAvatarIds: nextIds, updatedAt: serverTimestamp() };
+      if (user.avatarId === avatar.id) {
+        privateUpdate.avatarId = DEFAULT_AVATAR_ID;
+        publicUpdate.avatarId = DEFAULT_AVATAR_ID;
+        user.avatarId = DEFAULT_AVATAR_ID;
+      }
+      user.premiumAvatarIds = nextIds;
+      batch.update(doc(db, 'users', user.id), privateUpdate);
+      batch.set(doc(db, 'publicProfiles', user.id), publicUpdate, { merge: true });
+    });
+    batch.delete(doc(db, 'premiumAvatarCatalog', avatar.id));
+    await batch.commit();
+    premiumAvatars = premiumAvatars.filter(item => item.id !== avatar.id);
+    resetPremiumAvatarForm();
+    renderPremiumAvatars();
+    renderUsers();
+    setPremiumAvatarFeedback(`${avatar.name} excluído do catálogo.`, 'success');
+  } catch (error) {
+    setPremiumAvatarFeedback('Não foi possível excluir o avatar premium.', 'error');
+  }
+};
+
+const renderPremiumAvatars = () => {
+  if (!premiumAvatarList) return;
+  premiumAvatarList.replaceChildren();
+  if (!premiumAvatars.length) {
+    const empty = document.createElement('div');
+    empty.className = 'admin-empty';
+    empty.textContent = 'Nenhum avatar premium cadastrado.';
+    premiumAvatarList.append(empty);
+    return;
+  }
+
+  premiumAvatars.forEach(avatar => {
+    const card = document.createElement('article');
+    card.className = 'premium-avatar-card';
+    const visual = document.createElement('div');
+    visual.className = 'premium-avatar-visual';
+    const image = document.createElement('img');
+    image.src = avatar.imageUrl;
+    image.alt = avatar.name;
+    const badge = document.createElement('span');
+    badge.textContent = 'PREMIUM';
+    visual.append(image, badge);
+
+    const content = document.createElement('div');
+    content.className = 'premium-avatar-content';
+    const heading = document.createElement('div');
+    heading.className = 'premium-avatar-heading';
+    const name = document.createElement('strong');
+    name.textContent = avatar.name;
+    const actions = document.createElement('div');
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.textContent = 'Editar';
+    edit.addEventListener('click', () => editPremiumAvatar(avatar));
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Excluir';
+    remove.addEventListener('click', () => deletePremiumAvatar(avatar));
+    actions.append(edit, remove);
+    heading.append(name, actions);
+
+    const eligibleUsers = users.filter(user => !(user.premiumAvatarIds || []).includes(avatar.id));
+    const grant = document.createElement('div');
+    grant.className = 'premium-avatar-grant';
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', `Escolher jogador para ${avatar.name}`);
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = eligibleUsers.length ? 'Selecionar jogador…' : 'Todos os jogadores já autorizados';
+    select.append(placeholder);
+    eligibleUsers.forEach(user => {
+      const option = document.createElement('option');
+      option.value = user.id;
+      option.textContent = user.displayName || user.email || 'Membro EXBR';
+      select.append(option);
+    });
+    const grantButton = document.createElement('button');
+    grantButton.type = 'button';
+    grantButton.textContent = 'Conceder';
+    grantButton.disabled = !eligibleUsers.length;
+    grantButton.addEventListener('click', () => {
+      if (!select.value) {
+        setPremiumAvatarFeedback('Selecione um jogador para conceder o avatar.', 'error');
+        return;
+      }
+      grantPremiumAvatar(avatar, select.value, grantButton);
+    });
+    grant.append(select, grantButton);
+
+    const assignments = document.createElement('div');
+    assignments.className = 'premium-assignments';
+    const assignedUsers = users.filter(user => (user.premiumAvatarIds || []).includes(avatar.id));
+    if (!assignedUsers.length) {
+      const empty = document.createElement('span');
+      empty.className = 'premium-assignments-empty';
+      empty.textContent = 'Ainda não concedido a nenhum jogador.';
+      assignments.append(empty);
+    } else {
+      assignedUsers.forEach(user => {
+        const assignment = document.createElement('span');
+        assignment.className = 'premium-assignment';
+        assignment.append(document.createTextNode(user.displayName || user.email || 'Membro EXBR'));
+        const revoke = document.createElement('button');
+        revoke.type = 'button';
+        revoke.textContent = '×';
+        revoke.setAttribute('aria-label', `Remover ${avatar.name} de ${user.displayName || user.email}`);
+        revoke.addEventListener('click', () => revokePremiumAvatar(avatar, user, revoke));
+        assignment.append(revoke);
+        assignments.append(assignment);
+      });
+    }
+    content.append(heading, grant, assignments);
+    card.append(visual, content);
+    premiumAvatarList.append(card);
+  });
+};
+
+const savePremiumAvatar = async event => {
+  event.preventDefault();
+  if (!premiumAvatarForm) return;
+  const submit = premiumAvatarForm.querySelector('[type="submit"]');
+  const avatarId = premiumAvatarForm.elements.avatarId.value;
+  const name = premiumAvatarForm.elements.name.value.trim();
+  const sourceUrl = premiumAvatarForm.elements.imageUrl.value.trim();
+  submit.disabled = true;
+  setPremiumAvatarFeedback('Arquivando a imagem no Cloudinary…');
+  try {
+    const imageUrl = await archiveImage(sourceUrl);
+    const reference = avatarId ? doc(db, 'premiumAvatarCatalog', avatarId) : doc(collection(db, 'premiumAvatarCatalog'));
+    const data = { name, imageUrl, updatedAt: serverTimestamp() };
+    if (!avatarId) data.createdAt = serverTimestamp();
+    await setDoc(reference, data, { merge: true });
+    const saved = { id: reference.id, name, imageUrl };
+    const index = premiumAvatars.findIndex(avatar => avatar.id === reference.id);
+    if (index >= 0) premiumAvatars[index] = { ...premiumAvatars[index], ...saved };
+    else premiumAvatars.push(saved);
+    premiumAvatars.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+    resetPremiumAvatarForm();
+    renderPremiumAvatars();
+    renderUsers();
+    setPremiumAvatarFeedback(`${name} salvo no catálogo premium.`, 'success');
+  } catch (error) {
+    setPremiumAvatarFeedback(error.message || 'Não foi possível salvar o avatar premium.', 'error');
+  } finally {
+    submit.disabled = false;
+  }
+};
+
 const loadData = async () => {
-  const [rankResponse, medalDefinitions, gallerySnapshot] = await Promise.all([
+  const [rankResponse, medalDefinitions, gallerySnapshot, premiumAvatarSnapshot] = await Promise.all([
     fetch('../data/patentes.json'),
     loadMedalCatalog(),
-    getDocs(collection(db, 'communityGallery')).catch(() => null)
+    getDocs(collection(db, 'communityGallery')).catch(() => null),
+    getDocs(collection(db, 'premiumAvatarCatalog')).catch(() => null)
   ]);
   const rankData = await rankResponse.json();
   ranks = [...rankData.patentes].sort((a, b) => a.ordem - b.ordem);
@@ -570,10 +810,14 @@ const loadData = async () => {
   galleryItems = gallerySnapshot
     ? gallerySnapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
     : [];
+  premiumAvatars = premiumAvatarSnapshot
+    ? premiumAvatarSnapshot.docs.map(item => ({ id: item.id, ...item.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'))
+    : [];
   galleryItems = await migrateGalleryImages(galleryItems);
   await migrateOperationImages();
   renderMedals();
   renderGalleryAdmin();
+  renderPremiumAvatars();
   setAdminMedalFeedback(`${medals.length} ${medals.length === 1 ? 'medalha disponível' : 'medalhas disponíveis'} para edição.`, 'success');
 
   stopUsersListener?.();
@@ -581,6 +825,7 @@ const loadData = async () => {
     users = usersSnapshot.docs.map(item => ({ id: item.id, ...item.data() }));
     users.sort((a, b) => (a.displayName || a.email || '').localeCompare(b.displayName || b.email || '', 'pt-BR'));
     renderUsers();
+    renderPremiumAvatars();
     setFeedback(`${users.length} membro${users.length === 1 ? '' : 's'} no registro. Atualização automática ativa.`, 'success');
 
     const publicBatch = writeBatch(db);
@@ -598,12 +843,24 @@ medalSearch?.addEventListener('input', renderMedals);
 adminMedalSearch?.addEventListener('input', renderMedals);
 medalCreate?.addEventListener('click', () => openMedalEditor());
 adminMedalCreate?.addEventListener('click', () => openMedalEditor());
+premiumAvatarForm?.addEventListener('submit', savePremiumAvatar);
+premiumAvatarCancel?.addEventListener('click', () => {
+  resetPremiumAvatarForm();
+  setPremiumAvatarFeedback('Edição cancelada.');
+});
 adminTabs.forEach(tab => tab.addEventListener('click', () => {
   const target = tab.dataset.adminTab;
   adminTabs.forEach(item => item.setAttribute('aria-selected', String(item === tab)));
   adminPanels.forEach(panel => { panel.hidden = panel.dataset.adminPanel !== target; });
-  if (adminTitle) adminTitle.textContent = target === 'medals' ? 'Gestão de medalhas' : target === 'gallery' ? 'Gestão da galeria' : 'Gestão de soldados';
+  if (adminTitle) adminTitle.textContent = target === 'medals'
+    ? 'Gestão de medalhas'
+    : target === 'premium-avatars'
+      ? 'Gestão de avatares premium'
+      : target === 'gallery'
+        ? 'Gestão da galeria'
+        : 'Gestão de soldados';
   if (target === 'medals') renderMedals();
+  if (target === 'premium-avatars') renderPremiumAvatars();
 }));
 galleryForm?.addEventListener('submit', saveGalleryItem);
 [...document.querySelectorAll('input[type="date"]')].forEach(field => field.addEventListener('click', () => {
