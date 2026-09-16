@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="../css/reset.css?v=20260906-2">
   <link rel="stylesheet" href="../css/base.css?v=20260906-10">
   <link rel="stylesheet" href="../css/components.css?v=20260907-15">
-  <link rel="stylesheet" href="../css/pages/admin.css?v=20260911-2">
+  <link rel="stylesheet" href="../css/pages/admin.css?v=20260916-1">
 </head>
 <body class="admin-page has-tactical-dock">
   <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
@@ -61,6 +61,7 @@
       <div class="admin-tabs" role="tablist" aria-label="Setores administrativos">
         <button type="button" role="tab" aria-selected="true" aria-controls="admin-soldiers-panel" data-admin-tab="soldiers">Soldados</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="admin-medals-panel" data-admin-tab="medals">Catálogo de medalhas</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="admin-premium-avatars-panel" data-admin-tab="premium-avatars">Avatares premium</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="admin-gallery-panel" data-admin-tab="gallery">Galeria</button>
       </div>
 
@@ -88,6 +89,27 @@
         </label>
         <p class="medal-dialog-feedback" data-admin-medal-feedback aria-live="polite">Carregando catálogo de medalhas…</p>
         <div class="medal-catalog admin-medal-catalog" data-admin-medal-catalog></div>
+      </section>
+
+      <section class="admin-panel premium-avatar-panel" id="admin-premium-avatars-panel" role="tabpanel" data-admin-panel="premium-avatars" hidden>
+        <div class="admin-catalog-heading">
+          <div><span>ACESSO RESTRITO //</span><h2>Avatares premium</h2></div>
+        </div>
+        <form class="premium-avatar-form" data-premium-avatar-form>
+          <input type="hidden" name="avatarId">
+          <label>Nome do avatar
+            <input name="name" type="text" maxlength="60" placeholder="Ex.: Comandante Osprey" required>
+          </label>
+          <label>URL da imagem
+            <input name="imageUrl" type="url" inputmode="url" maxlength="500" placeholder="https://..." required>
+          </label>
+          <div class="premium-avatar-form-actions">
+            <button type="submit">Salvar avatar premium</button>
+            <button type="button" data-premium-avatar-cancel hidden>Cancelar edição</button>
+          </div>
+        </form>
+        <p class="admin-feedback" data-premium-avatar-feedback aria-live="polite">Cadastre o avatar e conceda acesso aos jogadores autorizados.</p>
+        <div class="premium-avatar-list" data-premium-avatar-list><div class="admin-empty">Carregando avatares premium…</div></div>
       </section>
 
       <section class="admin-panel admin-gallery-panel" id="admin-gallery-panel" role="tabpanel" data-admin-panel="gallery" hidden>
@@ -165,6 +187,6 @@
   </nav>
 
   <script src="../js/main.js?v=20260907-2" defer></script>
-  <script src="../js/admin.js?v=20260912-4" type="module"></script>
+  <script src="../js/admin.js?v=20260916-1" type="module"></script>
 </body>
 </html>
