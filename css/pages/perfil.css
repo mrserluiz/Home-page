@@ -737,9 +737,14 @@
   text-transform: uppercase;
 }
 
+.avatar-option-group[data-premium-group="true"] .avatar-option-group-label { color: #f1cf5e; }
+.avatar-options button[data-premium="true"] { border-color: rgba(231, 189, 66, 0.48); background: radial-gradient(circle at center, rgba(226, 176, 44, 0.13), rgba(19, 19, 12, 0.76)); }
+.avatar-options button[data-premium="true"]::after { content: "PREMIUM"; position: absolute; right: 0.18rem; top: 0.18rem; z-index: 2; padding: 0.15rem 0.22rem; color: #ffe16a; background: rgba(34, 27, 5, 0.88); font: 0.42rem/1 Consolas, monospace; letter-spacing: 0.05em; }
+
 .avatar-option-group-items { display: flex; gap: 0.32rem; }
 
 .avatar-options button {
+  position: relative;
   width: 4.25rem;
   height: 5.5rem;
   flex: 0 0 4.25rem;
