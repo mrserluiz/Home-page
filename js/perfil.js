@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     group.append(label, items);
     avatarOptionsContainer.append(group);
   });
-  const avatarOptions = [...document.querySelectorAll('[data-avatar-option]')];
+  let avatarOptions = [...document.querySelectorAll('[data-avatar-option]')];
   const avatarSlideButtons = [...document.querySelectorAll('[data-avatar-slide]')];
   const bannerOptionsContainer = document.querySelector('[data-banner-options]');
   BANNER_CATALOG.forEach(banner => {
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!card || !avatarImage) return;
 
-  const avatars = new Map(avatarOptions.map(option => [option.dataset.avatar, option]));
+  let avatars = new Map(avatarOptions.map(option => [option.dataset.avatar, option]));
   const banners = new Map(bannerOptions.map(option => [option.dataset.banner, option]));
   const classes = new Map(classOptions.map(option => [option.dataset.classOption, option]));
   const factions = new Map(factionOptions.map(option => [option.dataset.factionOption, option]));
@@ -733,6 +733,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
+  const profileAvatarId = profile => {
+    const avatarId = profile?.avatarId || DEFAULT_AVATAR_ID;
+    return (profile?.premiumAvatarIds || []).includes(avatarId) ? avatarId : normalizeAvatarId(avatarId);
+  };
+
+  const loadAuthorizedPremiumAvatars = async profile => {
+    avatarOptionsContainer?.querySelector('[data-premium-group="true"]')?.remove();
+    avatarOptions = [...document.querySelectorAll('[data-avatar-option]')];
+    avatars = new Map(avatarOptions.map(option => [option.dataset.avatar, option]));
+    const authorizedIds = Array.isArray(profile?.premiumAvatarIds) ? profile.premiumAvatarIds : [];
+    if (!authorizedIds.length || !avatarOptionsContainer) return;
+
+    try {
+      const snapshot = await getDocs(collection(db, 'premiumAvatarCatalog'));
+      const definitions = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() }))
+        .filter(avatar => authorizedIds.includes(avatar.id) && avatar.imageUrl)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
+      if (!definitions.length) return;
+
+      const group = document.createElement('section');
+      group.className = 'avatar-option-group';
+      group.dataset.premiumGroup = 'true';
+      group.setAttribute('aria-label', 'Premium');
+      const label = document.createElement('strong');
+      label.className = 'avatar-option-group-label';
+      label.textContent = 'Premium';
+      const items = document.createElement('div');
+      items.className = 'avatar-option-group-items';
+
+      definitions.forEach(avatar => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.dataset.avatarOption = '';
+        button.dataset.premium = 'true';
+        button.dataset.avatar = avatar.id;
+        button.dataset.avatarName = avatar.name || 'Avatar premium';
+        button.dataset.avatarSrc = avatar.imageUrl;
+        button.title = avatar.name || 'Avatar premium';
+        button.setAttribute('aria-label', avatar.name || 'Avatar premium');
+        button.setAttribute('aria-pressed', 'false');
+        const image = document.createElement('img');
+        image.src = avatar.imageUrl;
+        image.alt = '';
+        image.loading = 'lazy';
+        button.append(image);
+        button.addEventListener('click', () => {
+          if (!isOwner) return;
+          applyAvatar(button);
+          savePreference('avatarId', avatar.id, `${avatar.name || 'Avatar premium'} selecionado.`);
+        });
+        items.append(button);
+      });
+      group.append(label, items);
+      avatarOptionsContainer.append(group);
+      avatarOptions = [...document.querySelectorAll('[data-avatar-option]')];
+      avatars = new Map(avatarOptions.map(option => [option.dataset.avatar, option]));
+    } catch (error) {
+      // O perfil continua utilizável com os avatares públicos quando o catálogo premium estiver indisponível.
+    }
+  };
+
   avatarOptions.forEach(option => option.addEventListener('click', () => {
     if (!isOwner) return;
     applyAvatar(option);
@@ -1070,7 +1132,8 @@ document.addEventListener('DOMContentLoaded', () => {
     await setDoc(doc(db, 'publicProfiles', currentProfileUid), {
       displayName: currentProfile.displayName || 'Membro EXBR',
       rankId: currentProfile.rankId || 'soldado',
-      avatarId: normalizeAvatarId(currentProfile.avatarId || DEFAULT_AVATAR_ID),
+      avatarId: profileAvatarId(currentProfile),
+      premiumAvatarIds: Array.isArray(currentProfile.premiumAvatarIds) ? currentProfile.premiumAvatarIds : [],
       bannerId: normalizeBannerId(currentProfile.bannerId || DEFAULT_BANNER_ID),
       bio: currentProfile.bio || '',
       favoriteClass: currentProfile.favoriteClass || '',
@@ -1087,14 +1150,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (snapshot.exists()) {
       const stored = snapshot.data();
       needsFeaturedMigration = !Object.hasOwn(stored, 'featuredMedalIds');
-      const profile = { bio: '', favoriteClass: '', favoriteFaction: '', featuredMedalIds: [], ...stored };
-      if (!Object.hasOwn(stored, 'bio') || !Object.hasOwn(stored, 'favoriteClass') || !Object.hasOwn(stored, 'favoriteFaction') || needsFeaturedMigration) {
+      const profile = { bio: '', favoriteClass: '', favoriteFaction: '', featuredMedalIds: [], premiumAvatarIds: [], ...stored };
+      if (!Object.hasOwn(stored, 'bio') || !Object.hasOwn(stored, 'favoriteClass') || !Object.hasOwn(stored, 'favoriteFaction') || !Object.hasOwn(stored, 'premiumAvatarIds') || needsFeaturedMigration) {
         try {
           await updateDoc(reference, {
             bio: profile.bio,
             favoriteClass: profile.favoriteClass,
             favoriteFaction: profile.favoriteFaction,
             featuredMedalIds: profile.featuredMedalIds,
+            premiumAvatarIds: profile.premiumAvatarIds,
             updatedAt: serverTimestamp()
           });
         } catch (error) {
@@ -1115,13 +1179,14 @@ document.addEventListener('DOMContentLoaded', () => {
       favoriteClass: '',
       favoriteFaction: '',
       featuredMedalIds: [],
+      premiumAvatarIds: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     try {
       await setDoc(reference, profile);
     } catch (error) {
-      const { bio, favoriteClass, favoriteFaction, featuredMedalIds, ...legacyProfile } = profile;
+      const { bio, favoriteClass, favoriteFaction, featuredMedalIds, premiumAvatarIds, ...legacyProfile } = profile;
       await setDoc(reference, legacyProfile);
     }
     return { ...profile, createdAt: null, updatedAt: null };
@@ -1143,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileMedalAdd) profileMedalAdd.hidden = viewerProfile?.role !== 'admin';
     refreshFeaturedCount();
     document.body.dataset.userRole = viewerProfile?.role === 'admin' ? 'admin' : 'member';
-    applyAvatar(avatars.get(normalizeAvatarId(profile.avatarId)) || avatars.get(DEFAULT_AVATAR_ID) || avatarOptions[0], false);
+    applyAvatar(avatars.get(profileAvatarId(profile)) || avatars.get(DEFAULT_AVATAR_ID) || avatarOptions[0], false);
     applyBanner(banners.get(normalizeBannerId(profile.bannerId)) || banners.get(DEFAULT_BANNER_ID) || bannerOptions[0]);
     const selectedClass = classes.get(profile.favoriteClass);
     const selectedFaction = factions.get(profile.favoriteFaction);
@@ -1198,6 +1263,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (commandBar) commandBar.hidden = false;
         if (adminAccess) adminAccess.hidden = viewerProfile.role !== 'admin';
+        await loadAuthorizedPremiumAvatars(currentProfile);
         renderProfile(currentProfile);
         if (viewingAnotherProfile && viewerProfile.role !== 'admin') {
           renderMedals(currentProfile.featuredMedals || []);
